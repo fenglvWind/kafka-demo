@@ -139,22 +139,21 @@ func (k *producer) DeleteTopic(topicName,address string ) error {
 	return  conn.DeleteTopics(topicName)
 }
 //判断topic是否存在集群中
-func (k *producer) IsTopicExistence(topicName,address string ) (bool,error){
-	res := false
+func (k *producer) IsTopicExistence(topicName,address string ) (error){
+
 	topicList,err := k.ListTopic(address)
 	if err != nil {
-		return res, err
+		return  err
 	}
 	if len(topicList) ==0 {
-		return res,nil
+		return nil
 	}
-	for _,v:=range topicList {
-		if v == topicName {
-			res = true
-			break
-		}
+	conn,err := k.Conn(address)
+	if err != nil {
+		return  err
 	}
-	return res,nil
+	defer conn.Close()
+	return conn.DeleteTopics(topicList...)
 }
 
 //判断topic是否存在集群中
