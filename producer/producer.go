@@ -13,6 +13,7 @@ import (
 var Producer = &producer{}
 
 type producer struct {
+	KafkaConn *kafka.Conn
 }
 
 //创建kafka连接
@@ -32,15 +33,12 @@ func (k *producer) Conn(address string) (*kafka.Conn, error) {
 	if err != nil {
 		return nil, err
 	}
+	k.KafkaConn = controllerConn
 	return controllerConn, nil
 }
 //创建topic
-func (k *producer) CreateTopic(topicName,address string,partitions,replication int ) error {
-	conn, err := k.Conn(address)
-	if err != nil {
-		return err
-	}
-	defer conn.Close()
+func (k *producer) CreateTopic(topicName string,partitions,replication int ) error {
+
 	if partitions == 0 {
 		partitions = 1
 	}
@@ -53,7 +51,7 @@ func (k *producer) CreateTopic(topicName,address string,partitions,replication i
 			ReplicationFactor: replication,
 	}
 
-	err = conn.CreateTopics(topicConfig)
+	err := k.KafkaConn.CreateTopics(topicConfig)
 	if err != nil {
 
 		log.Fatal(err)
@@ -61,16 +59,9 @@ func (k *producer) CreateTopic(topicName,address string,partitions,replication i
 	return nil
 }
 //查询出集群中所有自己创建的topic
-func (k *producer) ListTopic(address string) ([]string, error) {
-
+func (k *producer) ListTopic() ([]string, error) {
 	res := make([]string, 0)
-	conn, err := k.Conn(address)
-	if err != nil {
-		return nil,err
-	}
-	defer conn.Close()
-
-	partitions, err := conn.ReadPartitions()
+	partitions, err := k.KafkaConn.ReadPartitions()
 	if err != nil {
 		return res, nil
 	}
@@ -129,48 +120,37 @@ func (k *producer) Send(topicName string, message string,address ...string) erro
 	})
 }
 //删除topic
-func (k *producer) DeleteTopic(topicName,address string ) error {
-	conn, err := k.Conn(address)
-	if err != nil {
-		return err
-	}
-	defer conn.Close()
-
-	return  conn.DeleteTopics(topicName)
+func (k *producer) DeleteTopic(topicName string ) error {
+	return  k.KafkaConn.DeleteTopics(topicName)
 }
 //判断topic是否存在集群中
-func (k *producer) IsTopicExistence(topicName,address string ) (error){
-
-	topicList,err := k.ListTopic(address)
+func (k *producer) IsTopicExistence(topicName string ) (res bool, err error){
+	topicList,err := k.ListTopic()
 	if err != nil {
-		return  err
+		return
+	}
+	if len(topicList) ==0 {
+		return
+	}
+
+	for _, name := range topicList {
+		if name == topicName {
+			res = true
+			break
+		}
+	}
+	return
+}
+
+//删除所有非系统的topic
+func (k *producer) DeleteAllTopic() (err error){
+	topicList,err := k.ListTopic()
+	if err != nil {
+		return
 	}
 	if len(topicList) ==0 {
 		return nil
 	}
-	conn,err := k.Conn(address)
-	if err != nil {
-		return  err
-	}
-	defer conn.Close()
-	return conn.DeleteTopics(topicList...)
-}
+	return k.KafkaConn.DeleteTopics(topicList...)
 
-//判断topic是否存在集群中
-func (k *producer) DeleteAllTopic(address string ) ([]error,error){
-	errList:= make([]error,0)
-	topicList,err := k.ListTopic(address)
-	if err != nil {
-		return  errList,err
-	}
-	if len(topicList) ==0 {
-		return errList,nil
-	}
-	for _,v:=range topicList {
-		err := k.DeleteTopic(v,address)
-		if err != nil {
-			errList = append(errList,err)
-		}
-	}
-	return errList,nil
 }
