@@ -13,6 +13,8 @@ var Consumer = &consumer{}
 type consumer struct {
 	Conn *kafka.Reader
 	MsgChannel chan kafka.Message
+	//是否开启消息通道写入
+	isOpenChannel bool
 }
 
 var (
@@ -47,6 +49,8 @@ type ConsumerConfig struct {
 	MsgBufferSize int
 	//最大等待时间
 	MaxWait time.Duration
+	//是否开启消息通道写入
+	IsOpenChannel bool
 }
 //创建消费者
 //GroupID和Partition不能同时存在
@@ -88,10 +92,11 @@ func  NewConsumer(config *ConsumerConfig) (c *consumer){
 	})
 	c.Conn = conn
 	c.MsgChannel = make(chan kafka.Message, config.MsgBufferSize)
+	c.isOpenChannel = config.IsOpenChannel
 	Consumer = c
 	return
 }
-
+//自动提交
 func (c *consumer) ReceiveAuto() (err error){
 
 	for {
@@ -100,18 +105,14 @@ func (c *consumer) ReceiveAuto() (err error){
 			break
 		}
 		topicPartitionOffset := fmt.Sprintf("%v/%v/%v",m.Topic, m.Partition, m.Offset)
-		c.MsgChannel <- m
+		if c.isOpenChannel {
+			c.MsgChannel <- m
+		}
 		fmt.Printf("message at topic/partition/offset/recv_time %v/%v: %s = %s\n", topicPartitionOffset,time.Now().Unix(), string(m.Key), string(m.Value))
 	}
-	//defer func() {
-	//	if err = c.Conn.Close(); err != nil {
-	//		log.Fatal("failed to close reader:", err)
-	//	}
-	//}()
-	
 	return
 }
-
+//手动提交
 func (c *consumer) ReceiveManual() (err error){
 	ctx := context.Background()
 	for {
@@ -121,17 +122,13 @@ func (c *consumer) ReceiveManual() (err error){
 		}
 		topicPartitionOffset := fmt.Sprintf("%v/%v/%v",m.Topic, m.Partition, m.Offset)
 		fmt.Printf("message at topic/partition/offset/recv_time %v/%v: %s = %s\n", topicPartitionOffset,time.Now().Unix(), string(m.Key), string(m.Value))
-		c.MsgChannel <- m
+		if c.isOpenChannel {
+			c.MsgChannel <- m
+		}
 		if err := c.Conn.CommitMessages(ctx, m); err != nil {
 			log.Fatal("failed to commit messages:", err)
 			break
 		}
 	}
-	//defer func() {
-	//	if err := c.Conn.Close(); err != nil {
-	//		log.Fatal("failed to close reader:", err)
-	//	}
-	//}()
-
 	return
 }
