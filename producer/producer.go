@@ -17,24 +17,25 @@ type producer struct {
 }
 
 //创建kafka连接
-func (k *producer) Conn(address string) (*kafka.Conn, error) {
+func NewConn(address string) (c *producer,err error) {
+	c = &producer{}
 	conn, err := kafka.Dial("tcp", address)
 	if err != nil {
-		return nil, err
+		return
 	}
 	defer conn.Close()
 
 	controller, err := conn.Controller()
 	if err != nil {
-		return nil, err
+		return
 	}
 	var controllerConn *kafka.Conn
 	controllerConn, err = kafka.Dial("tcp", net.JoinHostPort(controller.Host, strconv.Itoa(controller.Port)))
 	if err != nil {
-		return nil, err
+		return
 	}
-	k.KafkaConn = controllerConn
-	return controllerConn, nil
+	c.KafkaConn = controllerConn
+	return
 }
 //创建topic
 func (k *producer) CreateTopic(topicName string,partitions,replication int ) error {

@@ -3,42 +3,43 @@ package t_test
 import (
 	"fmt"
 	"github.com/fenglvWind/kafka-demo/producer"
-	"github.com/segmentio/kafka-go"
 	"testing"
 	"time"
 )
 const Address = "192.168.202.101:31184"
-var Conn *kafka.Conn
+
 
 const TopicName = "test"
 
+var Producer = producer.Producer
+
 func init()  {
-	conn, err := producer.Producer.Conn(Address)
+	p, err := producer.NewConn(Address)
 	if err != nil {
 		panic(err)
 	}
-	Conn = conn
+	Producer = p
 	fmt.Println("init kafka conn is success")
 }
 func TestCreateTopic(t *testing.T)  {
-	fmt.Println(producer.Producer.CreateTopic(TopicName,1,1))
+	fmt.Println(Producer.CreateTopic(TopicName,1,1))
 }
 func TestListTopic(t *testing.T)  {
-	fmt.Println(producer.Producer.ListTopic())
+	fmt.Println(Producer.ListTopic())
 }
 
 func TestSendMsg(t *testing.T)  {
 	for  {
-		fmt.Println(producer.Producer.Send(TopicName,fmt.Sprint(time.Now().UnixMilli()),Address))
+		fmt.Println(Producer.Send(TopicName,fmt.Sprint(time.Now().UnixMilli()),Address))
 		//time.Sleep(1* time.Millisecond)
 	}
 }
 func TestDeleteAllTopic(t *testing.T)  {
-	fmt.Println(producer.Producer.DeleteAllTopic())
+	fmt.Println(Producer.DeleteAllTopic())
 }
 func TestDeleteTopic(t *testing.T)  {
-	fmt.Println(producer.Producer.DeleteTopic(TopicName))
+	fmt.Println(Producer.DeleteTopic(TopicName))
 }
 func TestIsTopicExistence(t *testing.T)  {
-	fmt.Println(producer.Producer.IsTopicExistence(TopicName))
+	fmt.Println(Producer.IsTopicExistence(TopicName))
 }
