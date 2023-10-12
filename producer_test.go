@@ -5,6 +5,7 @@ import (
 	"github.com/fenglvWind/kafka-demo/producer"
 	"github.com/segmentio/kafka-go"
 	"testing"
+	"time"
 )
 const Address = "192.168.202.101:31184"
 var Conn *kafka.Conn
@@ -27,7 +28,10 @@ func TestListTopic(t *testing.T)  {
 }
 
 func TestSendMsg(t *testing.T)  {
-	fmt.Println(producer.Producer.Send(TopicName,"test",Address))
+	for  {
+		fmt.Println(producer.Producer.Send(TopicName,fmt.Sprint(time.Now().UnixMilli()),Address))
+		//time.Sleep(1* time.Millisecond)
+	}
 }
 func TestDeleteAllTopic(t *testing.T)  {
 	fmt.Println(producer.Producer.DeleteAllTopic())
